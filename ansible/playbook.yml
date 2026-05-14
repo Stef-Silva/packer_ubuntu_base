@@ -1,6 +1,6 @@
 ---
 - name: Update webservers
-  hosts: webservices
+  hosts: all
   become: true
 
   vars:

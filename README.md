@@ -1,6 +1,6 @@
 # Packer Ubuntu Base Image
 
-Este repositório contém um projeto focado em demonstrar o funcionamento do processo de build de imagens com HashiCorp Packer.
+Este repositório contém um projeto focado em demonstrar o funcionamento do processo de build de imagens com o Packer.
 
 O objetivo principal é documentar e automatizar a criação de uma AMI Ubuntu base usando o builder `amazon-ebs`. A integração com Ansible e o consumo da imagem final via Terraform fazem parte da evolução natural do projeto.
 
@@ -10,10 +10,10 @@ Criar uma imagem AMI personalizável no AWS EC2 com Ubuntu 20.04 (Focal), prepar
 
 ## Status do projeto
 
-- Scaffold inicial de imagem base Ubuntu 20.04 com Packer.
-- `source.pkr.hcl` já configura `amazon-ebs` e replica a AMI para `us-east-2` e `us-west-2`.
-- `build.pkr.hcl` referencia apenas o source e não executa provisionamento Ansible.
-- `ansible/` contém inventário e playbook Docker, mas ainda não está integrado ao `packer build`.
+- Packer build integrado com provisionamento Ansible para Docker.
+- `source.pkr.hcl` configura `amazon-ebs` e replica a AMI para `us-east-2` e `us-west-2`.
+- `build.pkr.hcl` usa o provisioner `ansible` para aplicar o playbook `ansible/playbook.yml`.
+- `ansible/` contém inventário, playbook e requisitos de Galaxy para a role Docker.
 
 ## Visão geral da arquitetura
 
@@ -22,7 +22,7 @@ Criar uma imagem AMI personalizável no AWS EC2 com Ubuntu 20.04 (Focal), prepar
   - Usa como base a AMI oficial do Ubuntu 20.04 em `us-east-1`.
   - Define o username SSH padrão via variável `user`.
   - Gera nome de imagem com carimbo de data/hora ou `release` customizada.
-- `build.pkr.hcl` monta a build básica e referencia apenas o source Amazon EBS; o provisionador Ansible ainda não está integrado.
+- `build.pkr.hcl` monta a build básica e usa um provisioner Ansible para aplicar o playbook Docker.
 - `variables.pkr.hcl` define parâmetros customizáveis do projeto.
 
 ![Fluxo do processo Packer → Ansible → AMI → Terraform](./architecture.png)
@@ -33,7 +33,7 @@ Criar uma imagem AMI personalizável no AWS EC2 com Ubuntu 20.04 (Focal), prepar
 2. O builder `amazon-ebs` instancia uma VM temporária na AWS.
 3. Uma nova AMI é criada com tags e nome customizado.
 
-> Observação: o projeto já contém assets Ansible em `ansible/`, mas o `packer build` atual não executa esse playbook. A integração com o provisionador Ansible é a próxima etapa.
+> Observação: o projeto já contém assets Ansible em `ansible/` e o `packer build` atual executa o playbook via provisioner Ansible.
 
 ## Arquivos principais
 
@@ -46,7 +46,7 @@ Criar uma imagem AMI personalizável no AWS EC2 com Ubuntu 20.04 (Focal), prepar
   - Suporta múltiplas regiões através de `ami_regions`, replicando a AMI criada para regiões adicionais.
 - `build.pkr.hcl`
   - Define a build baseada em `source.amazon-ebs.imagem-base`.
-  - Atualmente contém apenas a configuração de sources. O provisionador Ansible será adicionado na próxima etapa.
+  - Executa o provisioner Ansible para aplicar `ansible/playbook.yml` durante o build.
 - `variables.pkr.hcl`
   - `user`: usuário SSH padrão para a instância (`ubuntu` por padrão).
   - `release`: tag opcional para versionamento de imagem.
@@ -69,13 +69,16 @@ packer build .
 
 O diretório `ansible/` contém:
 - `inventory`: inventário de hosts
-- `playbook.yaml`: playbook que aplica o role `geerlingguy.docker` e habilita Docker Compose
+- `playbook.yml`: playbook que aplica o role `geerlingguy.docker` e habilita Docker Compose
+- `requirements.yml`: requisitos Galaxy usados pelo provisioner Ansible
 
-Este Ansible não é executado automaticamente pelo Packer ainda. Para testar separadamente:
+O `packer build` executa este playbook automaticamente durante o build da AMI.
+
+Para testar separadamente:
 
 ```bash
 cd ansible
-ansible-playbook -i inventory playbook.yaml
+ansible-playbook -i inventory playbook.yml
 ```
 
 ## Variáveis de build
@@ -107,9 +110,8 @@ Isso garante que a imagem base esteja disponível em diferentes regiões para re
 
 ## Próximas etapas
 
-1. **Integração Ansible**: Adicionar o provisioner Ansible em `build.pkr.hcl` para configurar a imagem durante o build.
-2. **Suporte a múltiplas regiões**: Habilitar `ami_regions` em `source.pkr.hcl`.
-3. **Testes e validação**: Incluir `post-processors` para testes.
-4. **Consumo com Terraform**: Criar projeto separado que usa a AMI gerada.
-5. **Pipeline CI/CD**: Integrar com GitHub Actions ou outro orquestrador.
+1. **Validar build**: testar `packer build` e confirmar o provisionamento Ansible.
+2. **Testes e validação**: adicionar `post-processors` ou validação automática para a AMI gerada.
+3. **Consumo com Terraform**: criar projeto separado que usa a AMI final.
+4. **Pipeline CI/CD**: integrar o build com GitHub Actions ou outro orquestrador.
 
