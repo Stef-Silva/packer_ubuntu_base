@@ -58,6 +58,18 @@ packer build .
 
 5. O Packer criará a AMI na região `us-east-1`.
 
+## Ansible
+
+O diretório `ansible/` contém:
+- `inventory`: inventário de hosts
+- `playbook.yaml`: playbook básico que instala `apache2`
+
+Este Ansible não é executado automaticamente pelo Packer ainda. Para testar separadamente:
+
+```bash
+cd ansible
+ansible-playbook -i inventory playbook.yaml
+
 ## Variáveis de build
 
 - `user`: define o usuário SSH padrão. Default: `ubuntu`.
