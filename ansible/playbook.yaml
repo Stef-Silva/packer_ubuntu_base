@@ -1,11 +1,10 @@
 ---
 - name: Update webservers
   hosts: webservices
-  become: true  
+  become: true
+
+  vars:
+    docker_install_compose: true
   
-  tasks: 
-   - name: Ensure apache is at the latest version
-     ansible.builtin.apt:
-      name: apache2
-      state: latest
-      update_cache: true
+  roles: 
+   - geerlingguy.docker

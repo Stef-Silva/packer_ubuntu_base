@@ -8,6 +8,13 @@ O objetivo principal é documentar e automatizar a criação de uma AMI Ubuntu b
 
 Criar uma imagem AMI personalizável no AWS EC2 com Ubuntu 20.04 (Focal), preparada para ser usada como base em pipelines de infraestrutura e deployment.
 
+## Status do projeto
+
+- Scaffold inicial de imagem base Ubuntu 20.04 com Packer.
+- `source.pkr.hcl` já configura `amazon-ebs` e replica a AMI para `us-east-2` e `us-west-2`.
+- `build.pkr.hcl` referencia apenas o source e não executa provisionamento Ansible.
+- `ansible/` contém inventário e playbook Docker, mas ainda não está integrado ao `packer build`.
+
 ## Visão geral da arquitetura
 
 - `init.pkr.hcl` define os requisitos de plugin do Packer, garantindo que o plugin AWS (`amazon`) esteja disponível.
@@ -15,7 +22,7 @@ Criar uma imagem AMI personalizável no AWS EC2 com Ubuntu 20.04 (Focal), prepar
   - Usa como base a AMI oficial do Ubuntu 20.04 em `us-east-1`.
   - Define o username SSH padrão via variável `user`.
   - Gera nome de imagem com carimbo de data/hora ou `release` customizada.
-- `build.pkr.hcl` monta a pipeline de build e aplica o provisionador Ansible.
+- `build.pkr.hcl` monta a build básica e referencia apenas o source Amazon EBS; o provisionador Ansible ainda não está integrado.
 - `variables.pkr.hcl` define parâmetros customizáveis do projeto.
 
 ![Fluxo do processo Packer → Ansible → AMI → Terraform](./architecture.png)
@@ -26,7 +33,7 @@ Criar uma imagem AMI personalizável no AWS EC2 com Ubuntu 20.04 (Focal), prepar
 2. O builder `amazon-ebs` instancia uma VM temporária na AWS.
 3. Uma nova AMI é criada com tags e nome customizado.
 
-> Observação: o trabalho atual foca no processo de build básico com Packer. A integração com o provisionador Ansible será adicionada na próxima etapa, seguida pelo consumo da AMI final via Terraform.
+> Observação: o projeto já contém assets Ansible em `ansible/`, mas o `packer build` atual não executa esse playbook. A integração com o provisionador Ansible é a próxima etapa.
 
 ## Arquivos principais
 
@@ -62,13 +69,14 @@ packer build .
 
 O diretório `ansible/` contém:
 - `inventory`: inventário de hosts
-- `playbook.yaml`: playbook básico que instala `apache2`
+- `playbook.yaml`: playbook que aplica o role `geerlingguy.docker` e habilita Docker Compose
 
 Este Ansible não é executado automaticamente pelo Packer ainda. Para testar separadamente:
 
 ```bash
 cd ansible
 ansible-playbook -i inventory playbook.yaml
+```
 
 ## Variáveis de build
 
